@@ -21,7 +21,7 @@ access_token = app_id + "|" + app_secret
 
 #since we want to scrape data about going on a run, let's try Nike.com 
 
-page_id = 'nike'
+page_id = 'nytimes'
 
 # let's check that this page id is valid and the access token actually works
 
@@ -81,6 +81,16 @@ print (json.dumps(test_status, indent=4, sort_keys=True))
 # the status is now a dictionary of the metadata. Some keys may not exist, so we have to check
 # for existance. 
 
+def getFacebookPageFeedUrl(base_url):
+
+    # Construct the URL string; see http://stackoverflow.com/a/37239851 for
+    # Reactions parameters
+    fields = "&fields=message,link,created_time,type,name,id," + \
+        "comments.limit(0).summary(true),shares,reactions" + \
+        ".limit(0).summary(true)"
+
+    return base_url + fields
+
 def processFacebookPageStatus(status):
 	status_id = status['id']
 	status_message = '' if 'message' not in status.keys() else status['message'].encode('utf-8')
@@ -114,36 +124,49 @@ def processFacebookPageStatus(status):
 
 def scraper(page_id, access_token):
 	with open('%s_facebook_statuses.csv' % page_id, 'w') as file:
-	    w = csv.writer(file)
-	    w.writerow(["status_id", "status_message", "link_name", "status_type", "status_link","status_time", "num_likes", "num_comments", "num_shares"])
-	    
-	    has_next_page = True
-	    num_processed = 0   # keep a count on how many we've processed
-	    scrape_starttime = datetime.datetime.now()
-	    
-	    print ("Scraping %s Facebook Page: %s\n" % (page_id, scrape_starttime))
-	    
-	    statuses = getFacebookPostData(page_id, access_token, 100)
+		w = csv.writer(file)
+		w.writerow(["status_id", "status_message", "link_name", "status_type", "status_link","status_time", "num_likes", "num_comments", "num_shares"])
 
-	    print(statuses['paging'].keys())
-	    
-	    while has_next_page:
-	        for status in statuses['data']:
-	            w.writerow(processFacebookPageStatus(status))
-	            
-	            # output progress occasionally to make sure code is not stalling
-	            num_processed += 1
-	            if num_processed % 1000 == 0:
-	                print ("%s Statuses Processed: %s" % (num_processed, datetime.datetime.now()))
-	                
-	        # if there is no next page, we're done.
-	        if 'paging' in statuses.keys():
-	            statuses = json.loads(request_until_succeed(statuses['paging']['next']).decode("utf-8"))
-	        else:
-	            has_next_page = False
-	            
-	    
-	    print ("\nDone!\n%s Statuses Processed in %s" % (num_processed, datetime.datetime.now() - scrape_starttime))
+		has_next_page = True
+		num_processed = 0   # keep a count on how many we've processed
+		scrape_starttime = datetime.datetime.now()
+
+		print ("Scraping %s Facebook Page: %s\n" % (page_id, scrape_starttime))
+
+		after = ''
+		base = "https://graph.facebook.com/v2.9"
+		node = "/{}/posts".format(page_id)
+		parameters = "/?limit={}&access_token={}".format(100, access_token)
+
+	#statuses = getFacebookPostData(page_id, access_token, 100)
+
+	#print(statuses['paging'].keys())
+
+
+		while has_next_page:
+
+			after = '' if after is '' else "&after={}".format(after)
+			base_url = base + node + parameters + after
+
+			url = getFacebookPageFeedUrl(base_url)
+			statuses = json.loads(request_until_succeed(url).decode("utf-8"))
+
+			for status in statuses['data']:
+				w.writerow(processFacebookPageStatus(status))
+		        
+		        # output progress occasionally to make sure code is not stalling
+				num_processed += 1
+				if num_processed % 1000 == 0:
+					print ("%s Statuses Processed: %s" % (num_processed, datetime.datetime.now()))
+		            
+		    # if there is no next page, we're done.
+			if 'paging' in statuses.keys():
+				after = statuses['paging']['cursors']['after']
+		        #statuses = json.loads(request_until_succeed(statuses['paging']['next']).decode("utf-8"))
+			else:
+				has_next_page = False
+	        
+	print ("\nDone!\n%s Statuses Processed in %s" % (num_processed, datetime.datetime.now() - scrape_starttime))
 
 scraper(page_id, access_token)
 
