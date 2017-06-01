@@ -1,4 +1,3 @@
-# importing some python dependencies
 
 import json 
 import datetime
@@ -13,11 +12,6 @@ from random import randint
 from twilio.rest import Client
 
 
-# try:
-#     from urllib.request import urlopen, Request
-# except ImportError:
-#     from urllib2 import urlopen, Request
-
 app_id = "381373792260126"
 app_secret = "02112d6ea1fdf09d9ff7268aa505238f"
 
@@ -26,8 +20,6 @@ access_token = app_id + "|" + app_secret
 #since we want to scrape data about going on a run, let's try Nike.com 
 
 page_id = 'nike'
-
-#random_message = None
 
 # let's check that this page id is valid and the access token actually works
 
@@ -42,7 +34,7 @@ def testFBpagedata(page_id, access_token):
 	response = urllib2.urlopen(req)
 	data = json.loads(response.read().decode("utf-8"))
 
-	#print (json.dumps(data, indent = 4, sort_keys=True))
+	print (json.dumps(data, indent = 4, sort_keys=True))
 
 testFBpagedata(page_id, access_token)
 
@@ -78,7 +70,7 @@ def getFacebookPostData(page_id, access_token, num_statuses):
     
 
 test_status = getFacebookPostData(page_id, access_token, 1)['data'][0]
-#print (json.dumps(test_status['message'], indent=4, sort_keys=True))
+print (json.dumps(test_status['message'], indent=4, sort_keys=True))
 
 # this reduces the number of posts requested to 1 (just to keep it clean), and makes 
 # specific requests as to what data we want from the post. 
@@ -100,10 +92,6 @@ def getFacebookPageFeedUrl(base_url):
 def processFacebookPageStatus(status):
 	status_id = status['id']
 	status_message = '' if 'message' not in status.keys() else status['message'].encode('utf-8')
-	# if "run" in status_message: 
-	# 	message_indicator = True
-	# else: 
-	# 	message_indicator = False
 
 	link_name = '' if 'name' not in status.keys() else status['name'].encode('utf-8')
 	status_type = status['type']
@@ -117,14 +105,9 @@ def processFacebookPageStatus(status):
 	num_comments = 0 if 'comments' not in status.keys() else status['comments']['summary']['total_count']
 	num_shares = 0 if 'shares' not in status.keys() else status['shares']['count']
 
-	# if message_indicator == True: 
 	return (status_id, status_message,link_name, status_type, status_link,
        status_time, num_likes, num_comments, num_shares)
-	# else: 
-		# return 
 
-	processed_test_status = processFacebookPageFeedStatus(test_status)
-#	print (processed_test_status)
 
 # # Now we have the tools to get the status information, and so we nned to write all this data to a CSV
 
@@ -143,10 +126,6 @@ def scraper(page_id, access_token):
 		base = "https://graph.facebook.com/v2.9"
 		node = "/{}/posts".format(page_id)
 		parameters = "/?limit={}&access_token={}".format(100, access_token)
-
-	#statuses = getFacebookPostData(page_id, access_token, 100)
-
-	#print(statuses['paging'].keys())
 
 		rand = randint(1, 300)
 
@@ -173,10 +152,8 @@ def scraper(page_id, access_token):
 		    # if there is no next page, we're done.
 			if 'paging' in statuses.keys():
 				after = statuses['paging']['cursors']['after']
-		        #statuses = json.loads(request_until_succeed(statuses['paging']['next']).decode("utf-8"))
 			else:
 				has_next_page = False
-	#twiliointegration(random_message)
 	print ("\nDone!\n%s Statuses Processed in %s" % (num_processed, datetime.datetime.now() - scrape_starttime))
 	return random_message
 random_message = scraper(page_id, access_token)
