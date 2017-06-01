@@ -9,6 +9,10 @@ try:
 	import urllib.request as urllib2
 except ImportError:
 	import urllib2
+from random import randint
+from twilio.rest import Client
+
+
 # try:
 #     from urllib.request import urlopen, Request
 # except ImportError:
@@ -21,7 +25,9 @@ access_token = app_id + "|" + app_secret
 
 #since we want to scrape data about going on a run, let's try Nike.com 
 
-page_id = 'nytimes'
+page_id = 'nike'
+
+#random_message = None
 
 # let's check that this page id is valid and the access token actually works
 
@@ -36,7 +42,7 @@ def testFBpagedata(page_id, access_token):
 	response = urllib2.urlopen(req)
 	data = json.loads(response.read().decode("utf-8"))
 
-	print (json.dumps(data, indent = 4, sort_keys=True))
+	#print (json.dumps(data, indent = 4, sort_keys=True))
 
 testFBpagedata(page_id, access_token)
 
@@ -67,12 +73,12 @@ def getFacebookPostData(page_id, access_token, num_statuses):
 	url = base + node + parameters
 
     # retrieve data
-	data = json.loads(request_until_succeed(url).decode("utf-8"))
+	data = json.loads((request_until_succeed(url)).decode("utf-8"))
 	return data
     
 
 test_status = getFacebookPostData(page_id, access_token, 1)['data'][0]
-print (json.dumps(test_status, indent=4, sort_keys=True))
+#print (json.dumps(test_status['message'], indent=4, sort_keys=True))
 
 # this reduces the number of posts requested to 1 (just to keep it clean), and makes 
 # specific requests as to what data we want from the post. 
@@ -118,9 +124,9 @@ def processFacebookPageStatus(status):
 		# return 
 
 	processed_test_status = processFacebookPageFeedStatus(test_status)
-	print (processed_test_status)
+#	print (processed_test_status)
 
-# Now we have the tools to get the status information, and so we nned to write all this data to a CSV
+# # Now we have the tools to get the status information, and so we nned to write all this data to a CSV
 
 def scraper(page_id, access_token):
 	with open('%s_facebook_statuses.csv' % page_id, 'w') as file:
@@ -142,6 +148,7 @@ def scraper(page_id, access_token):
 
 	#print(statuses['paging'].keys())
 
+		rand = randint(1, 300)
 
 		while has_next_page:
 
@@ -150,7 +157,7 @@ def scraper(page_id, access_token):
 
 			url = getFacebookPageFeedUrl(base_url)
 			statuses = json.loads(request_until_succeed(url).decode("utf-8"))
-
+			
 			for status in statuses['data']:
 				w.writerow(processFacebookPageStatus(status))
 		        
@@ -158,19 +165,31 @@ def scraper(page_id, access_token):
 				num_processed += 1
 				if num_processed % 1000 == 0:
 					print ("%s Statuses Processed: %s" % (num_processed, datetime.datetime.now()))
-		            
+				if num_processed == rand: 
+					random_message = status['message']
+					print(random_message)
+					print(rand)
+					print(num_processed)
 		    # if there is no next page, we're done.
 			if 'paging' in statuses.keys():
 				after = statuses['paging']['cursors']['after']
 		        #statuses = json.loads(request_until_succeed(statuses['paging']['next']).decode("utf-8"))
 			else:
 				has_next_page = False
-	        
+	#twiliointegration(random_message)
 	print ("\nDone!\n%s Statuses Processed in %s" % (num_processed, datetime.datetime.now() - scrape_starttime))
+	return random_message
+random_message = scraper(page_id, access_token)
 
-scraper(page_id, access_token)
+account_sid = "AC64c88234fd07f2b3c978dd24777f53d1"
+auth_token  = "859e2138b210f9f5c5c247df58891669"
+client = Client(account_sid, auth_token)
 
+message = client.messages.create(
+    to="+19259892332", 
+    from_="+19258923074",
+    body= str(random_message))
 
-
+print(message.sid)
 
 
